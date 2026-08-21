@@ -611,6 +611,9 @@
             border-radius: 3px;
         }
     </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
 </head>
 <body>
     <div class="container">
@@ -818,18 +821,58 @@
     </div>
 
     <script>
+        // FIREBASE CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9U7bp-OI-s_Yca8puGG-1dYS7s0iX5Kg",
+            authDomain: "calendario-intelcia.firebaseapp.com",
+            databaseURL: "https://calendario-intelcia-default-rtdb.firebaseio.com",
+            projectId: "calendario-intelcia",
+            storageBucket: "calendario-intelcia.firebasestorage.app",
+            messagingSenderId: "334719876003",
+            appId: "1:334719876003:web:639a9a3a9e7a2fb4123816",
+            measurementId: "G-Y4QH2TM8ZK"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         // DATA STORAGE
-        let permissions = JSON.parse(localStorage.getItem('permissions')) || [];
+        let permissions = [];
         let currentMonth = new Date();
         let selectedEvent = null;
+        let dbLoaded = false;
 
         // INITIALIZATION
         document.addEventListener('DOMContentLoaded', () => {
-            renderCalendar();
-            updateSidebar();
+            loadPermissionsFromFirebase();
             setupEventListeners();
-            addSampleData();
         });
+
+        // Load permissions from Firebase with real-time updates
+        function loadPermissionsFromFirebase() {
+            const permissionsRef = db.ref('permissions');
+            permissionsRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    permissions = Object.values(data).map(perm => ({
+                        ...perm,
+                        dateStart: new Date(perm.dateStart),
+                        dateEnd: new Date(perm.dateEnd)
+                    }));
+                } else {
+                    permissions = [];
+                }
+
+                if (!dbLoaded) {
+                    dbLoaded = true;
+                    addSampleData();
+                } else {
+                    renderCalendar();
+                    updateSidebar();
+                }
+            });
+        }
 
         function addSampleData() {
             if (permissions.length === 0) {
@@ -861,9 +904,10 @@
                     }
                 ];
                 savePermissions();
-                renderCalendar();
-                updateSidebar();
             }
+            // Always render and update sidebar after data loads
+            renderCalendar();
+            updateSidebar();
         }
 
         function setupEventListeners() {
@@ -1257,7 +1301,20 @@
         }
 
         function savePermissions() {
-            localStorage.setItem('permissions', JSON.stringify(permissions));
+            // Convert dates to ISO strings for Firebase
+            const permissionsToSave = {};
+            permissions.forEach(perm => {
+                permissionsToSave[perm.id] = {
+                    ...perm,
+                    dateStart: perm.dateStart instanceof Date ? perm.dateStart.toISOString() : perm.dateStart,
+                    dateEnd: perm.dateEnd instanceof Date ? perm.dateEnd.toISOString() : perm.dateEnd
+                };
+            });
+
+            db.ref('permissions').set(permissionsToSave).catch(error => {
+                console.error('Error saving to Firebase:', error);
+                alert('Error guardando los datos: ' + error.message);
+            });
         }
 
         // Close modals on outside click
