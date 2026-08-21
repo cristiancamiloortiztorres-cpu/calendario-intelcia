@@ -878,7 +878,7 @@
                 renderCalendar();
             });
 
-            document.getElementById('newPermissionBtn').addEventListener('click', openNewPermissionModal);
+            document.getElementById('newPermissionBtn').addEventListener('click', () => openNewPermissionModal(null));
             const permissionForm = document.getElementById('permissionForm');
             permissionForm.addEventListener('submit', function(e) {
             e.preventDefault();
